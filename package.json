@@ -5,7 +5,6 @@
   "version": "1.0.0",
   "private": false,
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
   "author": {
     "email": "admin@oibit.cn",
     "name": "HULANG-BTB",
@@ -35,5 +34,8 @@
     "LICENSE"
   ],
   "LICENSE": "MIT",
-  "typings": "./dist/index.d.ts"
+  "typings": "./dist/index.d.ts",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  }
 }
