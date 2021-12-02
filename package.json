@@ -1,0 +1,39 @@
+{
+  "name": "dynamic-proxy",
+  "description": "Change proxy quickly.",
+  "keywords": ["webpack-dev-server", "express", "proxy", "dynamic"],
+  "version": "1.0.0",
+  "private": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "author": {
+    "email": "admin@oibit.cn",
+    "name": "HULANG-BTB",
+    "url": "https://oibit.cn"
+  },
+  "publisher": "oibit",
+  "scripts": {
+    "watch": "tsc -w",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "express": "^4.17.1"
+  },
+  "dependencies": {
+    "chalk": "^5.0.0",
+    "chokidar": "^3.5.2",
+    "http-proxy-middleware": "^2.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HULANG-BTB/dynamic-proxy.git"
+  },
+  "files": [
+    "./dist",
+    "README.MD",
+    "LICENSE"
+  ],
+  "LICENSE": "MIT",
+  "typings": "./dist/index.d.ts"
+}
