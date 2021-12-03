@@ -1,2 +1,3 @@
 import { Application } from "express";
-export declare function useProxy(app: Application, file: string | undefined): void;
+import { DynamicProxyOptions } from "./proxy";
+export declare function useProxy(app: Application, options?: DynamicProxyOptions | string): void;

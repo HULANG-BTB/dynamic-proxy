@@ -26,12 +26,12 @@ The file content like this:
 
 ```javascript
 module.exports = {
-  '/api': {
+  "/api": {
     ws: true,
     changeOrigin: true,
-    target: 'http://127.0.0.1:8888'
-  }
-}
+    target: "http://127.0.0.1:8888",
+  },
+};
 ```
 
 ### 2、Use Proxy
@@ -39,17 +39,59 @@ module.exports = {
 `vue.config.js` or `webpack.config.js`
 
 ```javascript
+// ...
+const { useProxy } = require("dynamic-proxy");
+
+module.exports = {
   // ...
-  const { useProxy } = require('dynamic-proxy')
-  
-  module.exports = {
-      // ...
-      devServer: {
-          // ... 
-          after(app) {
-              useProxy(app)
-          }
-      }
-  }
+  devServer: {
+    // ...
+    after(app) {
+      useProxy(app); // or useProxy(app, options)
+    },
+  },
+};
 ```
 
+### Custom options
+
+- Options can be a `string` to declare the proxy file where is.
+
+  ```javascript
+  // ...
+  const filename = path.join(__dirname, "custom.proxy.js");
+
+  module.exports = {
+    // ...
+    devServer: {
+      // ...
+      after(app) {
+        useProxy(app, filename);
+      },
+    },
+  };
+  ```
+
+- Options also can be a `object` with `proxyFile` and `watchFiles`.
+
+  ```javascript
+  // ...
+
+  const options = {
+    proxyFile: path.join(__dirname, "custom.proxy.js"),
+    watch: [
+      // someother file's path like `proxyFile` field.
+      // proxy server will reload when these files changed
+    ],
+  };
+
+  module.exports = {
+    // ...
+    devServer: {
+      // ...
+      after(app) {
+        useProxy(app, options);
+      },
+    },
+  };
+  ```

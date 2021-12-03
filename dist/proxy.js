@@ -20,12 +20,21 @@ var path_1 = __importDefault(require("path"));
 var chalk_1 = __importDefault(require("chalk"));
 var http_proxy_middleware_1 = require("http-proxy-middleware");
 var DynamicProxy = /** @class */ (function () {
-    function DynamicProxy(app, proxyFile) {
+    function DynamicProxy(app, options) {
+        var _this = this;
+        var _a;
         this.proxyStartIndex = 0;
         this.proxyEndIndex = 0;
         this.proxyLength = 0;
+        this.watchFile = [];
         this.app = app;
-        this.proxyFile = proxyFile || path_1.default.join(process.cwd(), "proxy.js");
+        this.proxyFile = (_a = options === null || options === void 0 ? void 0 : options.proxyFile) !== null && _a !== void 0 ? _a : path_1.default.join(process.cwd(), "proxy.js");
+        if (options && Array.isArray(options.watch)) {
+            options.watch.forEach(function (file) {
+                _this.watchFile.push(file);
+            });
+        }
+        this.watchFile.push(this.proxyFile);
     }
     DynamicProxy.prototype.registerRoutes = function () {
         var _this = this;
@@ -39,20 +48,21 @@ var DynamicProxy = /** @class */ (function () {
         this.proxyStartIndex = this.proxyEndIndex - this.proxyLength;
     };
     DynamicProxy.prototype.unregisterRoutes = function () {
-        var _this = this;
         // remove middleware
         this.app._router.stack.splice(this.proxyStartIndex, this.proxyEndIndex);
         // clean cache
-        Object.keys(require.cache).forEach(function (i) {
-            if (i.includes(_this.proxyFile)) {
-                delete require.cache[require.resolve(i)];
-            }
+        this.watchFile.forEach(function (watchFile) {
+            Object.keys(require.cache).forEach(function (i) {
+                if (i.includes(watchFile)) {
+                    delete require.cache[require.resolve(i)];
+                }
+            });
         });
     };
     DynamicProxy.prototype.start = function () {
         var _this = this;
         this.registerRoutes();
-        chokidar_1.default.watch(this.proxyFile).on("all", function (event, path) {
+        chokidar_1.default.watch(this.watchFile).on("all", function (event, path) {
             if (event === "change" || event === "add") {
                 try {
                     _this.unregisterRoutes();

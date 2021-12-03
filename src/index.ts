@@ -1,7 +1,13 @@
 import { Application } from "express";
-import { DynamicProxy } from "./proxy";
+import { DynamicProxy, DynamicProxyOptions } from "./proxy";
 
-export function useProxy(app: Application, file: string | undefined) {
-  const proxy = new DynamicProxy(app, file);
+export function useProxy(app: Application, options?: DynamicProxyOptions | string) {
+  let config: DynamicProxyOptions = {};
+  if (typeof options === "string") {
+    config.proxyFile = options;
+  } else if (options) {
+    config = options;
+  }
+  const proxy = new DynamicProxy(app, config);
   proxy.start();
 }
