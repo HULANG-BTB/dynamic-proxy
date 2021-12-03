@@ -38,20 +38,36 @@ module.exports = {
 
 `vue.config.js` or `webpack.config.js`
 
-```javascript
-// ...
-const { useProxy } = require("dynamic-proxy");
+- For `webpack-dev-server v3` or vue/cli
 
-module.exports = {
+  ```javascript
   // ...
-  devServer: {
+  const { useProxy } = require("dynamic-proxy");
+
+  module.exports = {
     // ...
-    after(app) {
-      useProxy(app); // or useProxy(app, options)
+    devServer: {
+      // ...
+      after(app) {
+        useProxy(app); // or useProxy(app, options)
+      },
     },
-  },
-};
-```
+  };
+  ```
+
+- For `webpack-dev-server v4`
+
+  ```javascript
+  const { useProxy } = require("dynamic-proxy");
+
+  module.exports = {
+    devServer: {
+      onAfterSetupMiddleware: function (devServer) {
+        useProxy(devServer.app);
+      },
+    },
+  };
+  ```
 
 ### Custom options
 
