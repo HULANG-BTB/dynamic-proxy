@@ -2,6 +2,7 @@ import { Application } from "express";
 import chokidar from "chokidar";
 import path from "path";
 import chalk from "chalk";
+import fs from "fs";
 import { createProxyMiddleware, Options } from "http-proxy-middleware";
 
 export interface ProxyOptions {
@@ -36,6 +37,9 @@ export class DynamicProxy {
   }
 
   registerRoutes() {
+    if (!fs.existsSync(this.proxyFile)) {
+      return;
+    }
     const localProxy: ProxyOptions = require(this.proxyFile);
     Object.entries(localProxy).forEach(([path, options]) => {
       this.app.use(createProxyMiddleware(path, { ...options, logLevel: "silent" }));

@@ -18,6 +18,7 @@ exports.DynamicProxy = void 0;
 var chokidar_1 = __importDefault(require("chokidar"));
 var path_1 = __importDefault(require("path"));
 var chalk_1 = __importDefault(require("chalk"));
+var fs_1 = __importDefault(require("fs"));
 var http_proxy_middleware_1 = require("http-proxy-middleware");
 var DynamicProxy = /** @class */ (function () {
     function DynamicProxy(app, options) {
@@ -38,6 +39,9 @@ var DynamicProxy = /** @class */ (function () {
     }
     DynamicProxy.prototype.registerRoutes = function () {
         var _this = this;
+        if (!fs_1.default.existsSync(this.proxyFile)) {
+            return;
+        }
         var localProxy = require(this.proxyFile);
         Object.entries(localProxy).forEach(function (_a) {
             var path = _a[0], options = _a[1];
