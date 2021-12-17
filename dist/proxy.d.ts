@@ -6,6 +6,7 @@ export interface ProxyOptions {
 export interface DynamicProxyOptions {
     proxyFile?: string;
     watch?: string[];
+    options?: Options;
 }
 export declare class DynamicProxy {
     private proxyStartIndex;
@@ -15,6 +16,8 @@ export declare class DynamicProxy {
     private proxyFile;
     private watchFile;
     constructor(app: Application, options?: DynamicProxyOptions);
+    collectDeps(): void;
+    createOptions(customOptions: Options): Options;
     registerRoutes(): void;
     unregisterRoutes(): void;
     start(): void;
