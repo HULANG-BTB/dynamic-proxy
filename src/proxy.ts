@@ -15,17 +15,18 @@ export interface DynamicProxyOptions {
   options?: Options;
 }
 export class DynamicProxy {
-  private proxyStartIndex: number;
-  private proxyEndIndex: number;
-  private proxyLength: number;
+  private proxyMiddlewareStartIndex: number;
+  private proxyMiddlewareEndIndex: number;
+  private proxyMiddlewareLength: number;
   private app: Application;
   private proxyFile: string;
   private watchFile: Set<string>;
+  private watcher: chokidar.FSWatcher;
 
   constructor(app: Application, options?: DynamicProxyOptions) {
-    this.proxyStartIndex = 0;
-    this.proxyEndIndex = 0;
-    this.proxyLength = 0;
+    this.proxyMiddlewareStartIndex = 0;
+    this.proxyMiddlewareEndIndex = 0;
+    this.proxyMiddlewareLength = 0;
     this.watchFile = new Set<string>();
     this.app = app;
     this.proxyFile = options?.proxyFile ?? path.join(process.cwd(), "proxy.js");
@@ -34,20 +35,27 @@ export class DynamicProxy {
         this.watchFile.add(file);
       });
     }
-    this.watchFile.add(this.proxyFile);
+    this.watchFile = this.collectDeps();
+    this.watcher = chokidar.watch(Array.from(this.watchFile.values()));
   }
 
-  collectDeps() {
+  collectDeps(): Set<string> {
+    if (!fs.existsSync(this.proxyFile)) {
+      console.log(chalk.redBright(`The proxy file at \`${this.proxyFile}\` is not found.`));
+      return new Set<string>([]);
+    }
+    const deps: Set<string> = new Set<string>([this.proxyFile]);
     require(this.proxyFile);
     const walkDeps = (modules: NodeModule[]) => {
       modules.forEach((md) => {
-        this.watchFile.add(md.id);
+        deps.add(md.id);
         if (md.children.length) {
           walkDeps(md.children);
         }
       });
     };
     walkDeps(require.cache[this.proxyFile]?.children || []);
+    return deps;
   }
 
   createOptions(customOptions: Options): Options {
@@ -62,21 +70,19 @@ export class DynamicProxy {
       console.log(chalk.redBright(`The proxy file at \`${this.proxyFile}\` is not found.`));
       return;
     }
-    // recollect dep files before registe routes
-    this.collectDeps();
     const localProxy: ProxyOptions = require(this.proxyFile);
     Object.entries(localProxy).forEach(([context, customOptions]) => {
       const options = this.createOptions(customOptions);
       this.app.use(createProxyMiddleware(context, options));
-      this.proxyEndIndex = this.app._router.stack.length;
+      this.proxyMiddlewareEndIndex = this.app._router.stack.length;
     });
-    this.proxyLength = Object.keys(localProxy).length;
-    this.proxyStartIndex = this.proxyEndIndex - this.proxyLength;
+    this.proxyMiddlewareLength = Object.keys(localProxy).length;
+    this.proxyMiddlewareStartIndex = this.proxyMiddlewareEndIndex - this.proxyMiddlewareLength;
   }
 
   unregisterRoutes() {
     // remove middleware
-    this.app._router.stack.splice(this.proxyStartIndex, this.proxyEndIndex);
+    this.app._router.stack.splice(this.proxyMiddlewareStartIndex, this.proxyMiddlewareEndIndex);
     // clean cache
     this.watchFile.forEach((watchFile) => {
       Object.keys(require.cache).forEach((i) => {
@@ -89,15 +95,33 @@ export class DynamicProxy {
 
   start() {
     this.registerRoutes();
-    chokidar.watch(Array.from(this.watchFile.values())).on("all", (event, path) => {
-      if (event === "change" || event === "add") {
+    this.watcher.on("all", (event, path) => {
+      if (event === "change" || event === "add" || event === "unlink") {
         try {
           this.unregisterRoutes();
+          this.reload();
           this.registerRoutes();
           console.log(chalk.magentaBright(`\n > Proxy Server hot reload success! ${event}  ${path}`));
         } catch (error: any) {
           console.log(chalk.redBright(error));
         }
+      }
+    });
+  }
+
+  reload() {
+    // recollect deps
+    const newDeps = this.collectDeps();
+    // delete watch not in dep
+    Array.from(this.watchFile.values()).forEach((id) => {
+      if (!newDeps.has(id)) {
+        this.watchFile.delete(id);
+      }
+    });
+    // add watch file in new dep
+    Array.from(newDeps.values()).forEach((id) => {
+      if (!this.watchFile.has(id)) {
+        this.watcher.add(id);
       }
     });
   }

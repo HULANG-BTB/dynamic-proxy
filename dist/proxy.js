@@ -13,9 +13,9 @@ var DynamicProxy = /** @class */ (function () {
     function DynamicProxy(app, options) {
         var _this = this;
         var _a;
-        this.proxyStartIndex = 0;
-        this.proxyEndIndex = 0;
-        this.proxyLength = 0;
+        this.proxyMiddlewareStartIndex = 0;
+        this.proxyMiddlewareEndIndex = 0;
+        this.proxyMiddlewareLength = 0;
         this.watchFile = new Set();
         this.app = app;
         this.proxyFile = (_a = options === null || options === void 0 ? void 0 : options.proxyFile) !== null && _a !== void 0 ? _a : path_1.default.join(process.cwd(), "proxy.js");
@@ -24,21 +24,27 @@ var DynamicProxy = /** @class */ (function () {
                 _this.watchFile.add(file);
             });
         }
-        this.watchFile.add(this.proxyFile);
+        this.watchFile = this.collectDeps();
+        this.watcher = chokidar_1.default.watch(Array.from(this.watchFile.values()));
     }
     DynamicProxy.prototype.collectDeps = function () {
-        var _this = this;
         var _a;
+        if (!fs_1.default.existsSync(this.proxyFile)) {
+            console.log(chalk_1.default.redBright("The proxy file at `".concat(this.proxyFile, "` is not found.")));
+            return new Set([]);
+        }
+        var deps = new Set([this.proxyFile]);
         require(this.proxyFile);
         var walkDeps = function (modules) {
             modules.forEach(function (md) {
-                _this.watchFile.add(md.id);
+                deps.add(md.id);
                 if (md.children.length) {
                     walkDeps(md.children);
                 }
             });
         };
         walkDeps(((_a = require.cache[this.proxyFile]) === null || _a === void 0 ? void 0 : _a.children) || []);
+        return deps;
     };
     DynamicProxy.prototype.createOptions = function (customOptions) {
         var options = {
@@ -52,21 +58,19 @@ var DynamicProxy = /** @class */ (function () {
             console.log(chalk_1.default.redBright("The proxy file at `".concat(this.proxyFile, "` is not found.")));
             return;
         }
-        // recollect dep files before registe routes
-        this.collectDeps();
         var localProxy = require(this.proxyFile);
         Object.entries(localProxy).forEach(function (_a) {
             var context = _a[0], customOptions = _a[1];
             var options = _this.createOptions(customOptions);
             _this.app.use((0, http_proxy_middleware_1.createProxyMiddleware)(context, options));
-            _this.proxyEndIndex = _this.app._router.stack.length;
+            _this.proxyMiddlewareEndIndex = _this.app._router.stack.length;
         });
-        this.proxyLength = Object.keys(localProxy).length;
-        this.proxyStartIndex = this.proxyEndIndex - this.proxyLength;
+        this.proxyMiddlewareLength = Object.keys(localProxy).length;
+        this.proxyMiddlewareStartIndex = this.proxyMiddlewareEndIndex - this.proxyMiddlewareLength;
     };
     DynamicProxy.prototype.unregisterRoutes = function () {
         // remove middleware
-        this.app._router.stack.splice(this.proxyStartIndex, this.proxyEndIndex);
+        this.app._router.stack.splice(this.proxyMiddlewareStartIndex, this.proxyMiddlewareEndIndex);
         // clean cache
         this.watchFile.forEach(function (watchFile) {
             Object.keys(require.cache).forEach(function (i) {
@@ -79,16 +83,34 @@ var DynamicProxy = /** @class */ (function () {
     DynamicProxy.prototype.start = function () {
         var _this = this;
         this.registerRoutes();
-        chokidar_1.default.watch(Array.from(this.watchFile.values())).on("all", function (event, path) {
-            if (event === "change" || event === "add") {
+        this.watcher.on("all", function (event, path) {
+            if (event === "change" || event === "add" || event === "unlink") {
                 try {
                     _this.unregisterRoutes();
+                    _this.reload();
                     _this.registerRoutes();
                     console.log(chalk_1.default.magentaBright("\n > Proxy Server hot reload success! ".concat(event, "  ").concat(path)));
                 }
                 catch (error) {
                     console.log(chalk_1.default.redBright(error));
                 }
+            }
+        });
+    };
+    DynamicProxy.prototype.reload = function () {
+        var _this = this;
+        // recollect deps
+        var newDeps = this.collectDeps();
+        // delete watch not in dep
+        Array.from(this.watchFile.values()).forEach(function (id) {
+            if (!newDeps.has(id)) {
+                _this.watchFile.delete(id);
+            }
+        });
+        // add watch file in new dep
+        Array.from(newDeps.values()).forEach(function (id) {
+            if (!_this.watchFile.has(id)) {
+                _this.watcher.add(id);
             }
         });
     };

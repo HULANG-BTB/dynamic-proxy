@@ -9,16 +9,18 @@ export interface DynamicProxyOptions {
     options?: Options;
 }
 export declare class DynamicProxy {
-    private proxyStartIndex;
-    private proxyEndIndex;
-    private proxyLength;
+    private proxyMiddlewareStartIndex;
+    private proxyMiddlewareEndIndex;
+    private proxyMiddlewareLength;
     private app;
     private proxyFile;
     private watchFile;
+    private watcher;
     constructor(app: Application, options?: DynamicProxyOptions);
-    collectDeps(): void;
+    collectDeps(): Set<string>;
     createOptions(customOptions: Options): Options;
     registerRoutes(): void;
     unregisterRoutes(): void;
     start(): void;
+    reload(): void;
 }
