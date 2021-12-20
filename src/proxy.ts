@@ -1,25 +1,32 @@
-import { Application } from "express";
+import {Application} from "express";
 import chokidar from "chokidar";
 import path from "path";
 import chalk from "chalk";
 import fs from "fs";
-import { createProxyMiddleware, Options } from "http-proxy-middleware";
+import {createProxyMiddleware, Options} from "http-proxy-middleware";
 
 export interface ProxyOptions {
   [key: string]: Options;
 }
 
 export interface DynamicProxyOptions {
+  /**
+   * @deprecated
+   *
+   * this field will be deprecated in the feature, please use `file` to replace。
+   */
   proxyFile?: string;
+  file?: string;
   watch?: string[];
   options?: Options;
 }
+
 export class DynamicProxy {
   private proxyMiddlewareStartIndex: number;
   private proxyMiddlewareEndIndex: number;
   private proxyMiddlewareLength: number;
   private app: Application;
-  private proxyFile: string;
+  private readonly file: string;
   private watchFile: Set<string>;
   private watcher: chokidar.FSWatcher;
 
@@ -29,7 +36,10 @@ export class DynamicProxy {
     this.proxyMiddlewareLength = 0;
     this.watchFile = new Set<string>();
     this.app = app;
-    this.proxyFile = options?.proxyFile ?? path.join(process.cwd(), "proxy.js");
+    this.file = options?.file ?? options?.proxyFile ?? path.join(process.cwd(), "proxy.js");
+    if (options?.proxyFile) {
+      console.warn('field `proxyFile` is deprecated and will be remove in the feature, please use `file` to replace。')
+    }
     if (options && Array.isArray(options.watch)) {
       options.watch.forEach((file) => {
         this.watchFile.add(file);
@@ -40,12 +50,12 @@ export class DynamicProxy {
   }
 
   collectDeps(): Set<string> {
-    if (!fs.existsSync(this.proxyFile)) {
-      console.log(chalk.redBright(`The proxy file at \`${this.proxyFile}\` is not found.`));
+    if (!fs.existsSync(this.file)) {
+      console.log(chalk.redBright(`The proxy file at \`${this.file}\` is not found.`));
       return new Set<string>([]);
     }
-    const deps: Set<string> = new Set<string>([this.proxyFile]);
-    require(this.proxyFile);
+    const deps: Set<string> = new Set<string>([this.file]);
+    require(this.file);
     const walkDeps = (modules: NodeModule[]) => {
       modules.forEach((md) => {
         deps.add(md.id);
@@ -54,7 +64,7 @@ export class DynamicProxy {
         }
       });
     };
-    walkDeps(require.cache[this.proxyFile]?.children || []);
+    walkDeps(require.cache[this.file]?.children || []);
     return deps;
   }
 
@@ -66,11 +76,11 @@ export class DynamicProxy {
   }
 
   registerRoutes() {
-    if (!fs.existsSync(this.proxyFile)) {
-      console.log(chalk.redBright(`The proxy file at \`${this.proxyFile}\` is not found.`));
+    if (!fs.existsSync(this.file)) {
+      console.log(chalk.redBright(`The proxy file at \`${this.file}\` is not found.`));
       return;
     }
-    const localProxy: ProxyOptions = require(this.proxyFile);
+    const localProxy: ProxyOptions = require(this.file);
     Object.entries(localProxy).forEach(([context, customOptions]) => {
       const options = this.createOptions(customOptions);
       this.app.use(createProxyMiddleware(context, options));

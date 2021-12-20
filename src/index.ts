@@ -4,7 +4,7 @@ import { DynamicProxy, DynamicProxyOptions } from "./proxy";
 export function useProxy(app: Application, options?: DynamicProxyOptions | string) {
   let config: DynamicProxyOptions = {};
   if (typeof options === "string") {
-    config.proxyFile = options;
+    config.file = options;
   } else if (options) {
     config = options;
   }
