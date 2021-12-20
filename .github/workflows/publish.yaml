@@ -2,12 +2,11 @@ name: NPM Publish
 
 on:
   push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+    tags:
+      - "*"
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,9 +17,15 @@ jobs:
         with:
           node-version: "12.x"
           cache: "npm"
+          registry-url: https://registry.npmjs.org/
 
       - name: Install Dependences
         run: npm install
 
       - name: Build Javascript
         run: npm run build
+
+      - name: Publish
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
