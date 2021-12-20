@@ -94,9 +94,10 @@ module.exports = {
   // ...
 
   const options = {
-    proxyFile: path.join(__dirname, "custom.proxy.js"),
+    file: path.join(__dirname, "custom.proxy.js"),
     watch: [
-      // someother file's path like `proxyFile` field.
+      // if you use the verson >= 1.1.1, this may useless because it will auto collect the dependences for `file` field.
+      // someother file's path like `file` field.
       // proxy server will reload when these files changed
     ],
   };
