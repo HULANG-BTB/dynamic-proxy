@@ -5,7 +5,7 @@ var proxy_1 = require("./proxy");
 function useProxy(app, options) {
     var config = {};
     if (typeof options === "string") {
-        config.proxyFile = options;
+        config.file = options;
     }
     else if (options) {
         config = options;
